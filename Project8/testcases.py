@@ -774,11 +774,11 @@ class GraphTests(unittest.TestCase):
     """
     End AStarPriorityQueue Tests
     """
-    def test_chonk(self):
+    '''def test_chonk(self):
         chonk = Graph(csv='chonk.csv')
         check = np.loadtxt('chonk_solution.csv', delimiter=',', dtype=float).tolist()
         assert check == defeat_the_chonk(chonk)
-
+'''
 
 if __name__ == '__main__':
     unittest.main()

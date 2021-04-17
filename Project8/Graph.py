@@ -97,16 +97,38 @@ class Vertex:
 #============== Modify Vertex Methods Below ==============#
 
     def degree(self) -> int:
-        pass
+        """
+        gets degree of vertex
+        :returns: degree value as int
+        """
+        return len(self.adj)
 
     def get_edges(self) -> Set[Tuple[str, float]]:
-        pass
+        """
+        gets info of outgoing edges of vertex
+        :return: a set of tuples with id weight pairs
+        """
+        edges = set()
+        for key in self.adj:
+            tuplex = (key, self.adj[key])
+            edges.add(tuplex)
+        return edges
 
     def euclidean_distance(self, other: Vertex) -> float:
-        pass
+        """
+        get euclidian distance between 2 vertices
+        param: other vertex
+        :returns: the distance
+        """
+        return ((self.x-other.x)**2+(self.y-other.y)**2)**.5
 
     def taxicab_distance(self, other: Vertex) -> float:
-        pass
+        """
+        get taxicab distance between 2 vertices
+        param: other vertex
+        :returns: the distance
+        """
+        return abs(self.x - other.x) + abs(self.y - other.y)
 
 
 class Graph:
@@ -297,31 +319,206 @@ class Graph:
 #============== Modify Graph Methods Below ==============#
 
     def reset_vertices(self) -> None:
-        pass
+        """
+        reset the visited flag of all vertices in graph
+        """
+        for key in self.vertices:
+            self.vertices[key].visited = False
 
     def get_vertex(self, vertex_id: str) -> Vertex:
-        pass
+        """
+        get vertex from graph
+        :param: id
+        :returns: the vertex
+        """
+        if vertex_id in self.vertices:
+            return self.vertices[vertex_id]
+        return None
 
     def get_vertices(self) -> Set[Vertex]:
-        pass
+        """
+        get all vertices of graph
+        :returns: set of vertices
+        """
+        vss = set()
+        for key in self.vertices:
+            vss.add(self.vertices[key])
+        return vss
 
     def get_edge(self, start_id: str, dest_id: str) -> Tuple[str, str, float]:
-        pass
+        """
+        get edge between passed vertices
+        :param: starting id
+        :param: ending id
+        :returns: a tuple with startid, endid and weight of edge
+        """
+        if start_id in self.vertices and dest_id in self.vertices[start_id].adj:
+            return start_id, dest_id, float(self.vertices[start_id].adj[dest_id])
+        return None
 
     def get_edges(self) -> Set[Tuple[str, str, float]]:
-        pass
+        """
+        get all edges
+        :return: set of tuples with edge data
+        """
+        ess = set()
+        for vert in self.vertices:
+            for ver2 in self.vertices[vert].adj:
+                ess.add(self.get_edge(vert, ver2))
+        return ess
+
     def bfs(self, start_id: str, target_id: str) -> Tuple[List[str], float]:
-        pass
+        """
+        breadth first search for target from start
+        :param: start id
+        :param: target id
+        :returns: tuple with path list and cost
+        """
+        self.reset_vertices()
+        if start_id not in self.vertices or target_id not in self.vertices:
+            return [], 0
+        prev_vertex = {}
+        last_round_weight = {start_id: 0}
+        next_n = queue.SimpleQueue()
+        next_n.put(start_id)
+        self.vertices[start_id].visited = True
+        found = False
+        while not next_n.empty() and not found:
+            nid = next_n.get()
+            for vid in self.vertices[nid].adj:
+                if not self.vertices[vid].visited:
+                    next_n.put(vid)
+                    self.vertices[vid].visited = True
+                    prev_vertex[vid] = nid
+                    last_round_weight[vid] = self.vertices[nid].adj[vid]
+                    if vid == target_id:
+                        found = True
+                        break
+        if not found:
+            return [], 0
+        order = []
+        weight = 0
+        thisid = target_id
+        while thisid != start_id:
+            order.append(thisid)
+            weight += last_round_weight[thisid]
+            thisid = prev_vertex[thisid]
+        order.append(start_id)
+        order.reverse()
+        self.reset_vertices()
+        return order, weight
 
     def dfs(self, start_id: str, target_id: str) -> Tuple[List[str], float]:
-        pass
+        """
+        depth first search for target from start
+        :param: startid
+        :param: target id
+        :returns: tuple with path list and cost
+        """
+        weight = [0]
+        order = []
+
+        def dfs_inner(node_id: str):
+            """
+            iterator for dfs
+            :param: the current node
+            """
+            self.vertices[node_id].visited = True
+            found = False
+            if target_id in self.vertices[node_id].adj:
+                found = True
+                weight[0] += self.get_edge(node_id, target_id)[2]
+                order.append(target_id)
+                order.append(node_id)
+                return True
+            else:
+                for vert_id in self.vertices[node_id].adj:
+                    if not self.vertices[vert_id].visited:
+                        value = dfs_inner(vert_id)
+                        if value:
+                            weight[0] += self.get_edge(node_id, vert_id)[2]
+                            order.append(node_id)
+                            return True
+            return False
+        if start_id not in self.vertices or target_id not in self.vertices:
+            return [], 0
+
+        dfs_inner(start_id)
+        order.reverse()
+        self.reset_vertices()
+        return order, weight[0]
 
     def detect_cycle(self) -> bool:
-        pass
+        """
+        detect any cycles in graph
+        :return: bool indicating presence of cycle
+        """
+        result = [0]
+
+        def detect_inner(node_id, ancestory):
+            """
+            iterator for detect cycle
+            :param: current node id
+            """
+            self.vertices[node_id].visited = True
+            ancestory.append(node_id)
+            for vert_id in self.vertices[node_id].adj:
+                if vert_id in ancestory:
+                    result[0] += 1
+                    return
+                detect_inner(vert_id, ancestory)
+                ancestory.pop()
+
+        self.reset_vertices()
+        for node in self.vertices:
+            if not self.vertices[node].visited:
+                detect_inner(node, [])
+        return False if result[0] == 0 else True
+
 
     def a_star(self, start_id: str, target_id: str,
                metric: Callable[[Vertex, Vertex], float]) -> Tuple[List[str], float]:
-        pass
+        self.reset_vertices()
+        a_star_q = AStarPriorityQueue()
+        weight_keeper = {}
+        best_track = {}
+
+        for nid in self.vertices:
+            if nid != start_id:
+                weight_keeper[nid] = float('inf')
+                a_star_q.push(float('inf'), self.vertices[nid])
+            else:
+                weight_keeper[nid] = 0
+                self.vertices[nid].visited = True
+                a_star_q.push(0, self.vertices[nid])
+
+        while not a_star_q.empty():
+            key, vert = a_star_q.pop()
+            vert.visited = True
+            if target_id == vert.id:
+                break
+            for vid2 in vert.adj:
+                vert2 = self.vertices[vid2]
+                if not vert2.visited:
+                    last_weight = self.get_edge(vert.id, vert2.id)[2]
+                    if last_weight + weight_keeper[vert.id] < weight_keeper[vert2.id]:
+                        weight_keeper[vert2.id] = last_weight + weight_keeper[vert.id]
+                        newval = metric(self.vertices[target_id], vert2) + weight_keeper[vert2.id]
+                        a_star_q.update(newval, vert2)
+                        best_track[vid2] = vert.id
+
+        order = [target_id]
+        weight = 0
+        this_id = target_id
+        while this_id != start_id:
+            prev_id = best_track[this_id]
+            weight += self.get_edge(prev_id, this_id)[2]
+            this_id = prev_id
+            order.append(this_id)
+        order.reverse()
+        self.reset_vertices()
+        return order, weight
+
 
 class AStarPriorityQueue:
     """
@@ -404,4 +601,4 @@ class AStarPriorityQueue:
 
 # Extra Credit Problem
 def defeat_the_chonk(chonk: Graph) -> List[List[float]]:
-    pass
+    return []
